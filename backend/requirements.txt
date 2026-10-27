@@ -1,0 +1,12 @@
+
+fastapi[standard]
+python-multipart
+pymupdf
+python-docx
+python-pptx
+python-dotenv
+ollama
+supabase
+pytesseract
+Pillow
+pytest
