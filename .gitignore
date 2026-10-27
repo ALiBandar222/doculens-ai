@@ -1,0 +1,23 @@
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env.local
+
+# Python
+**/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node.js and Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Logs and operating system files
+*.log
+.DS_Store
+Thumbs.db
