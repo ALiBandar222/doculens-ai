@@ -123,7 +123,72 @@ def process_uploaded_document(
             detail="Document processing failed. Check backend logs.",
         ) from exc
 
-    
+
+@app.get("/api/v1/documents/{document_id}/signed-url")
+def get_document_signed_url(
+    document_id: UUID,
+    user=Depends(get_authenticated_user),
+):
+    user_id = str(user.id)
+
+    # Only allow access to documents owned by this user.
+    result = (
+        supabase.table("documents")
+        .select("id, filename, storage_path, mime_type")
+        .eq("id", str(document_id))
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    document = result.data[0]
+
+    try:
+        # Generate a temporary link to the private Storage object.
+        signed_result = (
+            supabase.storage
+            .from_("documents")
+            .create_signed_url(document["storage_path"], 300)
+        )
+
+        if hasattr(signed_result, "model_dump"):
+            signed_result = signed_result.model_dump()
+
+        if isinstance(signed_result, dict):
+            signed_url = (
+                signed_result.get("signedURL")
+                or signed_result.get("signedUrl")
+                or signed_result.get("signed_url")
+            )
+        else:
+            signed_url = (
+                getattr(signed_result, "signedURL", None)
+                or getattr(signed_result, "signedUrl", None)
+            )
+
+        if not signed_url:
+            raise ValueError("Supabase did not return a signed URL.")
+
+        return {
+            "signed_url": signed_url,
+            "filename": document["filename"],
+            "mime_type": document["mime_type"],
+            "expires_in": 300,
+        }
+
+    except Exception as exc:
+        logger.exception("Could not create document preview URL")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not generate a document preview link.",
+        ) from exc
+  
 @app.delete("/api/v1/documents/{document_id}")
 def delete_document(
     document_id: UUID,

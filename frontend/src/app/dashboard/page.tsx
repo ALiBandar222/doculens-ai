@@ -429,6 +429,67 @@ async function handleDeleteConversation(conversation: Conversation) {
     }
   }
 
+
+async function handleOpenSource(source: Source) {
+  const document = documents.find(
+    (item) => item.id === source.document_id
+  );
+
+  if (!document) {
+    setError("The source document could not be found.");
+    return;
+  }
+
+  // Open the tab directly from the click to avoid popup blocking.
+  const previewTab = window.open("about:blank", "_blank");
+
+  if (!previewTab) {
+    setError("Allow pop-ups in your browser to open source documents.");
+    return;
+  }
+
+  previewTab.opener = null;
+  previewTab.document.title = "Opening document...";
+
+  try {
+    setError("");
+
+    const session = await getSession();
+
+    if (!session) {
+      previewTab.close();
+      return;
+    }
+
+    const result = await apiRequest<{
+      signed_url: string;
+      filename: string;
+      mime_type: string;
+      expires_in: number;
+    }>(
+      `/api/v1/documents/${source.document_id}/signed-url`,
+      session.access_token
+    );
+
+    // PDF viewers commonly support opening a specific page.
+    const pageFragment =
+      result.mime_type === "application/pdf" &&
+      source.page_number != null
+        ? `#page=${source.page_number}`
+        : "";
+
+    previewTab.location.href = result.signed_url + pageFragment;
+  } catch (err) {
+    previewTab.close();
+
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Could not open the source document."
+    );
+  }
+}
+
   async function openConversation(conversationId: string) {
     if (loading) return;
 
@@ -852,6 +913,15 @@ async function handleDeleteConversation(conversation: Conversation) {
                             <p className="mt-2 text-xs text-gray-500">
                               Similarity: {source.similarity.toFixed(3)}
                             </p>
+                            
+                          <button
+                            onClick={() => void handleOpenSource(source)}
+                            className="mt-3 rounded-lg border border-blue-700 px-3 py-2 text-sm text-blue-300 hover:bg-blue-950"
+                          >
+                            Open source
+                            {source.page_number != null ? ` · Page ${source.page_number}` : ""}
+                          </button>
+
                           </div>
                         );
                       })}
