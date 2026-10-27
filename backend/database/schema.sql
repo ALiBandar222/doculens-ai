@@ -124,9 +124,6 @@ CREATE TABLE public.messages (
 CREATE INDEX documents_user_created_idx
     ON public.documents (user_id, created_at DESC);
 
-CREATE INDEX document_chunks_document_idx
-    ON public.document_chunks (document_id, chunk_index);
-
 CREATE INDEX document_chunks_user_idx
     ON public.document_chunks (user_id);
 
