@@ -242,6 +242,48 @@ def list_messages(
 
     return {"messages": result.data or []}
 
+    
+@app.delete("/api/v1/conversations/{conversation_id}")
+def delete_conversation(
+    conversation_id: UUID,
+    user=Depends(get_authenticated_user),
+):
+    user_id = str(user.id)
+    conversation_id_str = str(conversation_id)
+
+    # Verify ownership before deleting anything.
+    get_owned_conversation(conversation_id_str, user_id)
+
+    try:
+        # Delete the messages in this conversation.
+        (
+            supabase.table("messages")
+            .delete()
+            .eq("conversation_id", conversation_id_str)
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+        # Delete the conversation itself.
+        (
+            supabase.table("conversations")
+            .delete()
+            .eq("id", conversation_id_str)
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+        return {
+            "deleted": True,
+            "conversation_id": conversation_id_str,
+        }
+
+    except Exception as exc:
+        logger.exception("Conversation deletion failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not delete the conversation.",
+        ) from exc
 
 @app.post("/api/v1/chat")
 def chat_with_documents(

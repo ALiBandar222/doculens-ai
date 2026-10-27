@@ -1,10 +1,11 @@
-
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
+  const router = useRouter();
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,13 +26,16 @@ export default function Home() {
 
         if (error) throw error;
 
-        if (data.session) {
-          setStatus("Account created successfully! You are signed in.");
-        } else {
+        
+      if (data.session) {
+         router.replace("/dashboard");
+         return;
+      } else {
           setStatus(
             "Account created. Check your email to confirm your account, then sign in."
-          );
-        }
+           );
+      }
+
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -40,8 +44,8 @@ export default function Home() {
 
         if (error) throw error;
 
-        setStatus("Login successful! You are signed in.");
-      }
+        router.replace("/dashboard");
+        return;      }
     } catch (error) {
       setStatus(
         error instanceof Error
